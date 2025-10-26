@@ -1,26 +1,24 @@
 export default {
   async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
+    try {
+      const { audio_url } = await request.json();
 
-    if (url.pathname === "/" && request.method === "POST") {
-      return new Response("收到 POST，但未設定轉檔邏輯", {
-        status: 200,
-        headers: { "Content-Type": "text/plain" },
-      });
-    }
-
-    if (url.pathname === "/convert" && request.method === "POST") {
-      const formData = await request.formData();
-      const file = formData.get("file");
-
-      if (!file || !(file instanceof File)) {
-        return new Response("Missing audio file", { status: 400 });
+      if (!audio_url) {
+        return new Response(JSON.stringify({ error: "Missing audio_url" }), { status: 400 });
       }
 
-      // 你可以喺呢度 call 外部 FFmpeg API 或儲存 file
-      return new Response("收到音訊檔案", { status: 200 });
-    }
+      const ffmpegResponse = await fetch("https://your-ffmpeg-api.com/mp3", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio_url })
+      });
 
-    return new Response("404 Not Found", { status: 404 });
+      const result = await ffmpegResponse.json();
+      return new Response(JSON.stringify(result), {
+        headers: { "Content-Type": "application/json" }
+      });
+    } catch (err) {
+      return new Response("Worker exception: " + err.message, { status: 500 });
+    }
   }
 };
